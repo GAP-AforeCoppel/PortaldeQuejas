@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portal de Quejas | Afore Coppel</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        coppel: {
+                            blue: '#005A9C',
+                            yellow: '#FFC800',
+                            light: '#F3F4F6'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Transiciones suaves */
+        .fade-in { animation: fadeIn 0.3s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .hidden-tab { display: none; }
+        
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    </style>
+</head>
+<body class="bg-gray-50 text-slate-800 font-sans h-screen flex overflow-hidden">
+
+    <!-- Sidebar -->
+    <aside class="w-64 bg-coppel-blue text-white flex flex-col shadow-xl z-10 hidden md:flex">
+        <div class="p-6 flex items-center gap-3 border-b border-blue-800">
+            <div class="w-10 h-10 bg-coppel-yellow rounded-full flex items-center justify-center text-coppel-blue font-bold text-xl">
+                <i class="ph ph-shield-check"></i>
+            </div>
+            <h1 class="text-xl font-bold tracking-wide">Afore Portal</h1>
+        </div>
+        <nav class="flex-1 p-4 space-y-2">
+            <button onclick="switchTab('dashboard')" id="btn-dashboard" class="w-full flex items-center gap-3 px-4 py-3 bg-blue-800 rounded-lg transition-colors text-left font-medium">
+                <i class="ph ph-squares-four text-xl"></i> Dashboard
+            </button>
+            <button onclick="switchTab('quejas')" id="btn-quejas" class="w-full flex items-center gap-3 px-4 py-3 hover:bg-blue-800 rounded-lg transition-colors text-left font-medium">
+                <i class="ph ph-users text-xl"></i> Gestión de Quejas
+            </button>
+        </nav>
+        <div class="p-4 border-t border-blue-800 text-xs text-blue-200 text-center">
+            Sistema Interno v1.0
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-1 flex flex-col h-screen overflow-hidden relative">
+        
+        <!-- Mobile Header -->
+        <header class="md:hidden bg-coppel-blue text-white p-4 flex justify-between items-center shadow-md">
+            <div class="flex items-center gap-2">
+                <div class="w-8 h-8 bg-coppel-yellow rounded-full flex items-center justify-center text-coppel-blue font-bold">
+                    <i class="ph ph-shield-check"></i>
+                </div>
+                <h1 class="font-bold">Afore Portal</h1>
+            </div>
+            <div class="flex gap-2">
+                <button onclick="switchTab('dashboard')" class="p-2"><i class="ph ph-squares-four text-2xl"></i></button>
+                <button onclick="switchTab('quejas')" class="p-2"><i class="ph ph-users text-2xl"></i></button>
+            </div>
+        </header>
+
+        <!-- Topbar Desktop -->
+        <header class="hidden md:flex bg-white h-16 border-b items-center justify-between px-8 shadow-sm z-0">
+            <h2 id="page-title" class="text-xl font-semibold text-gray-700">Dashboard General</h2>
+            <div class="flex items-center gap-4">
+                <span class="text-sm text-gray-500" id="last-update">Actualizado: --</span>
+                <button onclick="fetchData()" class="p-2 rounded-full hover:bg-gray-100 transition" title="Actualizar datos">
+                    <i class="ph ph-arrows-clockwise text-xl text-gray-600"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- Contenedor con Scroll -->
+        <div class="flex-1 overflow-y-auto p-4 md:p-8">
+            
+            <!-- Loader -->
+            <div id="loader" class="absolute inset-0 bg-white/80 backdrop-blur-sm z-40 flex flex-col items-center justify-center">
+                <i class="ph ph-spinner-gap animate-spin text-5xl text-coppel-blue mb-4"></i>
+                <p class="text-gray-600 font-medium">Cargando base de datos...</p>
+            </div>
+
+            <!-- TAB 1: DASHBOARD -->
+            <div id="tab-dashboard" class="fade-in">
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                    <!-- Cards -->
+                    <div class="bg-white p-6 rounded-xl border border-gray-100 shadow-sm flex items-center gap-4 border-l-4 border-blue-500">
+                        <div class="p-3 bg-blue-50 text-blue-600 rounded-lg"><i class="ph ph-folder text-3xl"></i></div>
+                        <div>
+                            <p class="text-sm text-gray-500 font-medium">Total de Casos</p>
+                            <h3 class="text-3xl font-bold text-gray-800" id="stat-total">0</h3>
+                        </div>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl border border-gray-100 shadow-sm flex items-center gap-4 border-l-4 border-green-500">
+                        <div class="p-3 bg-green-50 text-green-600 rounded-lg"><i class="ph ph-check-circle text-3xl"></i></div>
+                        <div>
+                            <p class="text-sm text-gray-500 font-medium">Resueltos</p>
+                            <h3 class="text-3xl font-bold text-gray-800" id="stat-resueltos">0</h3>
+                        </div>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl border border-gray-100 shadow-sm flex items-center gap-4 border-l-4 border-yellow-500">
+                        <div class="p-3 bg-yellow-50 text-yellow-600 rounded-lg"><i class="ph ph-clock text-3xl"></i></div>
+                        <div>
+                            <p class="text-sm text-gray-500 font-medium">En Proceso</p>
+                            <h3 class="text-3xl font-bold text-gray-800" id="stat-proceso">0</h3>
+                        </div>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl border border-gray-100 shadow-sm flex items-center gap-4 border-l-4 border-red-500">
+                        <div class="p-3 bg-red-50 text-red-600 rounded-lg"><i class="ph ph-warning-circle text-3xl"></i></div>
+                        <div>
+                            <p class="text-sm text-gray-500 font-medium">Pendientes</p>
+                            <h3 class="text-3xl font-bold text-gray-800" id="stat-pendientes">0</h3>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+                    <h3 class="text-lg font-bold mb-4 text-gray-800 border-b pb-2">Últimos Casos Recibidos</h3>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-sm">
+                            <thead class="bg-gray-50 text-gray-600">
+                                <tr>
+                                    <th class="p-3 font-medium rounded-tl-lg">Caso</th>
+                                    <th class="p-3 font-medium">Fecha</th>
+                                    <th class="p-3 font-medium">Cliente</th>
+                                    <th class="p-3 font-medium">Estatus</th>
+                                </tr>
+                            </thead>
+                            <tbody id="dashboard-recent-table" class="divide-y divide-gray-100">
+                                <!-- Llenado por JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 2: GESTIÓN DE QUEJAS -->
+            <div id="tab-quejas" class="hidden-tab fade-in h-full flex flex-col">
+                
+                <!-- Filtros -->
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 mb-4 flex flex-wrap gap-4 items-end z-10">
+                    <div class="flex-1 min-w-[200px]">
+                        <label class="block text-xs font-medium text-gray-500 mb-1">Buscar (Caso o Nombre)</label>
+                        <div class="relative">
+                            <i class="ph ph-magnifying-glass absolute left-3 top-2.5 text-gray-400 text-lg"></i>
+                            <input type="text" id="searchBox" class="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-coppel-blue outline-none text-sm" placeholder="Ej. CAS-0012, Juan...">
+                        </div>
+                    </div>
+                    <div class="w-full sm:w-auto">
+                        <label class="block text-xs font-medium text-gray-500 mb-1">Estado</label>
+                        <select id="filterEstado" class="w-full sm:w-40 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-coppel-blue outline-none text-sm bg-white">
+                            <option value="">Todos</option>
+                        </select>
+                    </div>
+                    <div class="w-full sm:w-auto">
+                        <label class="block text-xs font-medium text-gray-500 mb-1">Estatus</label>
+                        <select id="filterEstatus" class="w-full sm:w-40 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-coppel-blue outline-none text-sm bg-white">
+                            <option value="">Todos</option>
+                            <option value="Pendiente">Pendiente</option>
+                            <option value="En proceso">En proceso</option>
+                            <option value="Resuelto">Resuelto</option>
+                        </select>
+                    </div>
+                    <div class="w-full sm:w-auto flex items-center h-10 px-2">
+                        <label class="flex items-center gap-2 cursor-pointer text-sm font-medium text-gray-700">
+                            <input type="checkbox" id="filterAdulto" class="w-4 h-4 text-coppel-blue rounded border-gray-300 focus:ring-coppel-blue">
+                            Solo Adulto Mayor
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Tabla Principal -->
+                <div class="bg-white rounded-xl shadow-sm border border-gray-100 flex-1 flex flex-col overflow-hidden relative">
+                    <div class="overflow-x-auto flex-1">
+                        <table class="w-full text-left text-sm whitespace-nowrap">
+                            <thead class="bg-gray-50 text-gray-600 sticky top-0 z-10 shadow-sm">
+                                <tr>
+                                    <th class="p-3 font-medium">Nº Caso</th>
+                                    <th class="p-3 font-medium">Fecha Apertura</th>
+                                    <th class="p-3 font-medium">Cliente</th>
+                                    <th class="p-3 font-medium">Tienda</th>
+                                    <th class="p-3 font-medium">Estado</th>
+                                    <th class="p-3 font-medium">Adulto Mayor</th>
+                                    <th class="p-3 font-medium">Estatus</th>
+                                    <th class="p-3 font-medium text-center">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="main-table-body" class="divide-y divide-gray-100">
+                                <!-- Llenado por JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="bg-gray-50 p-3 border-t text-xs text-gray-500 flex justify-between">
+                        <span id="table-count">Mostrando 0 registros</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- MODAL DE EDICIÓN -->
+    <div id="editModal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden transform transition-all scale-95 opacity-0 duration-200" id="modalContent">
+            
+            <div class="bg-coppel-blue p-4 text-white flex justify-between items-center">
+                <div>
+                    <h3 class="font-bold text-lg">Alimentar Registro</h3>
+                    <p class="text-blue-200 text-sm" id="modal-subtitle">Caso #---</p>
+                </div>
+                <button onclick="closeModal()" class="text-white hover:bg-blue-800 p-1 rounded transition">
+                    <i class="ph ph-x text-xl"></i>
+                </button>
+            </div>
+
+            <form id="editForm" class="p-6 space-y-5">
+                <input type="hidden" id="edit-rowIndex">
+                
+                <div class="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                    <input type="checkbox" id="edit-contesto" class="w-5 h-5 text-coppel-blue rounded border-gray-300 focus:ring-coppel-blue cursor-pointer">
+                    <label for="edit-contesto" class="font-medium text-gray-700 cursor-pointer">¿Contestó formulario?</label>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Acciones Correctivas</label>
+                    <textarea id="edit-acciones" rows="3" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-coppel-blue outline-none text-sm resize-none" placeholder="Describe las acciones tomadas..."></textarea>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Evidencia (LINK)</label>
+                    <div class="relative">
+                        <i class="ph ph-link absolute left-3 top-2.5 text-gray-400 text-lg"></i>
+                        <input type="url" id="edit-evidencia" class="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-coppel-blue outline-none text-sm" placeholder="https://drive.google.com/...">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Estatus del Caso</label>
+                    <select id="edit-estatus" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-coppel-blue outline-none text-sm bg-white">
+                        <option value="Pendiente">Pendiente</option>
+                        <option value="En proceso">En proceso</option>
+                        <option value="Resuelto">Resuelto</option>
+                    </select>
+                </div>
+
+                <div class="flex gap-3 pt-2">
+                    <button type="button" onclick="closeModal()" class="flex-1 px-4 py-2 bg-gray-100 text-gray-700 font-medium rounded-lg hover:bg-gray-200 transition">Cancelar</button>
+                    <button type="submit" id="btn-save" class="flex-1 px-4 py-2 bg-coppel-yellow text-coppel-blue font-bold rounded-lg hover:bg-yellow-500 transition flex justify-center items-center gap-2">
+                        <span>Guardar Cambios</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- TOAST NOTIFICATION -->
+    <div id="toast" class="fixed bottom-5 right-5 bg-gray-800 text-white px-4 py-3 rounded-lg shadow-lg flex items-center gap-3 transform translate-y-20 opacity-0 transition-all duration-300 z-50">
+        <i id="toast-icon" class="ph ph-check-circle text-green-400 text-xl"></i>
+        <span id="toast-message" class="text-sm font-medium">Mensaje...</span>
+    </div>
+
+    <script>
+        // ==========================================
+        // CONFIGURACIÓN (¡IMPORTANTE!)
+        // ==========================================
+        // Pega aquí la URL de tu Web App de Google Apps Script. 
+        // Si la dejas vacía, el sistema usará datos de prueba para que puedas previsualizar el diseño.
+        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby2cNRsvXz87XntOBCuNPUYEvBPn4aairfOxotSOt34rGLkQnG8hmxIjuWmppfFXJGy/exec'; 
+        
+        // ==========================================
+        // ESTADO GLOBAL
+        // ==========================================
+        let globalData = [];
+
+        // Datos de prueba por si no hay URL configurada
+        const mockData = [
+            { rowIndex: 2, "Número del caso": "CAS-2026-001", "Nombre del Cliente": "María G. López", "Estado": "Sinaloa", "TIENDA": "104 Culiacán Centro", "Estatus": "Pendiente", "¿Es Adulto Mayor?": true, "Fecha de apertura": "2026-04-05", "¿Contestó formulario?": false, "Acciones Correctivas": "", "Evidencia (LINK)": "" },
+            { rowIndex: 3, "Número del caso": "CAS-2026-002", "Nombre del Cliente": "Juan Pérez", "Estado": "Jalisco", "TIENDA": "205 GDL", "Estatus": "Resuelto", "¿Es Adulto Mayor?": false, "Fecha de apertura": "2026-04-06", "¿Contestó formulario?": true, "Acciones Correctivas": "Se contactó al cliente por teléfono y se resolvió su duda sobre el estado de cuenta.", "Evidencia (LINK)": "https://ejemplo.com/audio1" },
+            { rowIndex: 4, "Número del caso": "CAS-2026-003", "Nombre del Cliente": "Rosa M. Ruiz", "Estado": "Sinaloa", "TIENDA": "108 Mazatlán", "Estatus": "En proceso", "¿Es Adulto Mayor?": true, "Fecha de apertura": "2026-04-07", "¿Contestó formulario?": true, "Acciones Correctivas": "En espera de validación de gerencia.", "Evidencia (LINK)": "" },
+            { rowIndex: 5, "Número del caso": "CAS-2026-004", "Nombre del Cliente": "Carlos Slim", "Estado": "CDMX", "TIENDA": "301 Reforma", "Estatus": "Pendiente", "¿Es Adulto Mayor?": false, "Fecha de apertura": "2026-04-08", "¿Contestó formulario?": false, "Acciones Correctivas": "", "Evidencia (LINK)": "" }
+        ];
+
+        // ==========================================
+        // INICIALIZACIÓN Y NAVEGACIÓN
+        // ==========================================
+        document.addEventListener('DOMContentLoaded', () => {
+            fetchData();
+            setupFilters();
+            
+            // Form submit
+            document.getElementById('editForm').addEventListener('submit', handleSave);
+        });
+
+        function switchTab(tabId) {
+            document.getElementById('tab-dashboard').classList.add('hidden-tab');
+            document.getElementById('tab-quejas').classList.add('hidden-tab');
+            document.getElementById('tab-' + tabId).classList.remove('hidden-tab');
+
+            // Nav styling (Desktop)
+            document.getElementById('btn-dashboard').className = 'w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors text-left font-medium ' + (tabId === 'dashboard' ? 'bg-blue-800' : 'hover:bg-blue-800');
+            document.getElementById('btn-quejas').className = 'w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors text-left font-medium ' + (tabId === 'quejas' ? 'bg-blue-800' : 'hover:bg-blue-800');
+
+            document.getElementById('page-title').innerText = tabId === 'dashboard' ? 'Dashboard General' : 'Gestión de Quejas';
+        }
+
+        // ==========================================
+        // FETCH DATOS
+        // ==========================================
+        async function fetchData() {
+            showLoader(true);
+            try {
+                if (!SCRIPT_URL) {
+                    console.log("No SCRIPT_URL provided, using mock data for demonstration.");
+                    setTimeout(() => {
+                        globalData = mockData;
+                        processData();
+                        showLoader(false);
+                    }, 800);
+                    return;
+                }
+
+                const response = await fetch(`${SCRIPT_URL}?action=getData`);
+                const json = await response.json();
+                
+                if (json.status === 'success') {
+                    globalData = json.data;
+                    processData();
+                } else {
+                    showToast('Error al cargar datos: ' + json.message, 'error');
+                }
+            } catch (error) {
+                console.error("Fetch error:", error);
+                showToast('Error de conexión con el servidor.', 'error');
+                
+                // Fallback to mock data on error for preview purposes
+                if(!globalData.length) {
+                    globalData = mockData;
+                    processData();
+                }
+            } finally {
+                showLoader(false);
+                const now = new Date();
+                document.getElementById('last-update').innerText = `Actualizado: ${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
+            }
+        }
+
+        // ==========================================
+        // PROCESAMIENTO Y RENDERIZADO
+        // ==========================================
+        function processData() {
+            renderDashboard();
+            populateFilters();
+            renderTable();
+        }
+
+        function renderDashboard() {
+            const total = globalData.length;
+            const resueltos = globalData.filter(d => d['Estatus'] === 'Resuelto').length;
+            const proceso = globalData.filter(d => d['Estatus'] === 'En proceso').length;
+            const pendientes = globalData.filter(d => (!d['Estatus'] || d['Estatus'] === 'Pendiente')).length;
+
+            // Animate counters
+            animateValue("stat-total", parseInt(document.getElementById('stat-total').innerText), total, 500);
+            animateValue("stat-resueltos", parseInt(document.getElementById('stat-resueltos').innerText), resueltos, 500);
+            animateValue("stat-proceso", parseInt(document.getElementById('stat-proceso').innerText), proceso, 500);
+            animateValue("stat-pendientes", parseInt(document.getElementById('stat-pendientes').innerText), pendientes, 500);
+
+            // Recent cases table
+            const tbody = document.getElementById('dashboard-recent-table');
+            tbody.innerHTML = '';
+            
+            // Get last 5
+            const recent = [...globalData].reverse().slice(0, 5);
+            recent.forEach(row => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="p-3 text-gray-800 font-medium">${row['Número del caso'] || '-'}</td>
+                    <td class="p-3 text-gray-500">${formatDate(row['Fecha de apertura'])}</td>
+                    <td class="p-3 text-gray-700">${row['Nombre del Cliente'] || '-'}</td>
+                    <td class="p-3">${getBadgeHtml(row['Estatus'])}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function populateFilters() {
+            const estados = [...new Set(globalData.map(item => item['Estado']).filter(Boolean))].sort();
+            const selectEstado = document.getElementById('filterEstado');
+            
+            // Keep current value if any
+            const currVal = selectEstado.value;
+            selectEstado.innerHTML = '<option value="">Todos</option>';
+            estados.forEach(est => {
+                selectEstado.innerHTML += `<option value="${est}">${est}</option>`;
+            });
+            selectEstado.value = currVal;
+        }
+
+        function renderTable() {
+            const searchTerm = document.getElementById('searchBox').value.toLowerCase();
+            const fEstado = document.getElementById('filterEstado').value;
+            const fEstatus = document.getElementById('filterEstatus').value;
+            const fAdulto = document.getElementById('filterAdulto').checked;
+
+            const filteredData = globalData.filter(row => {
+                // Search (Caso o Nombre)
+                const textMatch = (row['Número del caso'] || '').toLowerCase().includes(searchTerm) || 
+                                  (row['Nombre del Cliente'] || '').toLowerCase().includes(searchTerm);
+                // Dropdowns
+                const estadoMatch = fEstado === '' || row['Estado'] === fEstado;
+                const estatusMatch = fEstatus === '' || (row['Estatus'] || 'Pendiente') === fEstatus;
+                // Checkbox Adulto Mayor (Handle boolean or string 'TRUE'/'FALSE')
+                let isAdulto = false;
+                if (typeof row['¿Es Adulto Mayor?'] === 'boolean') isAdulto = row['¿Es Adulto Mayor?'];
+                else if (typeof row['¿Es Adulto Mayor?'] === 'string') isAdulto = row['¿Es Adulto Mayor?'].trim().toUpperCase() === 'TRUE';
+                
+                const adultoMatch = !fAdulto || isAdulto;
+
+                return textMatch && estadoMatch && estatusMatch && adultoMatch;
+            });
+
+            const tbody = document.getElementById('main-table-body');
+            tbody.innerHTML = '';
+
+            filteredData.forEach(row => {
+                // Formatting values
+                let isAdulto = (row['¿Es Adulto Mayor?'] === true || String(row['¿Es Adulto Mayor?']).toUpperCase() === 'TRUE');
+                let iconAdulto = isAdulto ? '<i class="ph-fill ph-check-circle text-green-500 text-lg"></i>' : '<span class="text-gray-300">-</span>';
+
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-blue-50 transition-colors";
+                tr.innerHTML = `
+                    <td class="p-3 font-medium text-gray-800">${row['Número del caso'] || '-'}</td>
+                    <td class="p-3 text-gray-600">${formatDate(row['Fecha de apertura'])}</td>
+                    <td class="p-3 text-gray-800">${row['Nombre del Cliente'] || '-'}</td>
+                    <td class="p-3 text-gray-600 truncate max-w-[150px]" title="${row['TIENDA']}">${row['TIENDA'] || '-'}</td>
+                    <td class="p-3 text-gray-600">${row['Estado'] || '-'}</td>
+                    <td class="p-3 text-center">${iconAdulto}</td>
+                    <td class="p-3">${getBadgeHtml(row['Estatus'])}</td>
+                    <td class="p-3 text-center">
+                        <button onclick="openModal(${row.rowIndex})" class="bg-gray-100 hover:bg-coppel-yellow text-gray-700 hover:text-coppel-blue p-2 rounded-lg transition-colors shadow-sm border border-gray-200 hover:border-yellow-400" title="Alimentar Registro">
+                            <i class="ph ph-pencil-simple text-lg"></i>
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            document.getElementById('table-count').innerText = `Mostrando ${filteredData.length} registros`;
+        }
+
+        // ==========================================
+        // EVENTOS DE FILTROS
+        // ==========================================
+        function setupFilters() {
+            const triggerRender = () => renderTable();
+            document.getElementById('searchBox').addEventListener('input', triggerRender);
+            document.getElementById('filterEstado').addEventListener('change', triggerRender);
+            document.getElementById('filterEstatus').addEventListener('change', triggerRender);
+            document.getElementById('filterAdulto').addEventListener('change', triggerRender);
+        }
+
+        // ==========================================
+        // MODAL Y FORMULARIO (ALIMENTAR REGISTRO)
+        // ==========================================
+        function openModal(rowIndex) {
+            const row = globalData.find(d => d.rowIndex === rowIndex);
+            if (!row) return;
+
+            // Llenar campos
+            document.getElementById('modal-subtitle').innerText = `Caso: ${row['Número del caso'] || 'Sin número'}`;
+            document.getElementById('edit-rowIndex').value = rowIndex;
+            
+            // Checkbox Contestó
+            let contesto = (row['¿Contestó formulario?'] === true || String(row['¿Contestó formulario?']).toUpperCase() === 'TRUE');
+            document.getElementById('edit-contesto').checked = contesto;
+            
+            document.getElementById('edit-acciones').value = row['Acciones Correctivas'] || '';
+            document.getElementById('edit-evidencia').value = row['Evidencia (LINK)'] || '';
+            document.getElementById('edit-estatus').value = row['Estatus'] || 'Pendiente';
+
+            // Mostrar Modal con animación
+            const modal = document.getElementById('editModal');
+            const content = document.getElementById('modalContent');
+            modal.classList.remove('hidden');
+            // Trigger reflow
+            void modal.offsetWidth; 
+            content.classList.remove('scale-95', 'opacity-0');
+            content.classList.add('scale-100', 'opacity-100');
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('editModal');
+            const content = document.getElementById('modalContent');
+            
+            content.classList.remove('scale-100', 'opacity-100');
+            content.classList.add('scale-95', 'opacity-0');
+            
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                document.getElementById('editForm').reset();
+            }, 200);
+        }
+
+        async function handleSave(e) {
+            e.preventDefault();
+            
+            const btn = document.getElementById('btn-save');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = `<i class="ph ph-spinner animate-spin text-lg"></i> Guardando...`;
+            btn.disabled = true;
+
+            const payload = {
+                rowIndex: parseInt(document.getElementById('edit-rowIndex').value),
+                contestoFormulario: document.getElementById('edit-contesto').checked,
+                accionesCorrectivas: document.getElementById('edit-acciones').value,
+                evidenciaLink: document.getElementById('edit-evidencia').value,
+                estatus: document.getElementById('edit-estatus').value
+            };
+
+            try {
+                if (!SCRIPT_URL) {
+                    // Simular guardado si estamos en modo Demo
+                    await new Promise(r => setTimeout(r, 1000));
+                    
+                    // Actualizar estado local
+                    const index = globalData.findIndex(d => d.rowIndex === payload.rowIndex);
+                    if(index > -1) {
+                        globalData[index]['¿Contestó formulario?'] = payload.contestoFormulario;
+                        globalData[index]['Acciones Correctivas'] = payload.accionesCorrectivas;
+                        globalData[index]['Evidencia (LINK)'] = payload.evidenciaLink;
+                        globalData[index]['Estatus'] = payload.estatus;
+                    }
+                    
+                    showToast('Guardado exitoso (Modo Demo)');
+                    closeModal();
+                    processData(); // Re-render
+                } else {
+                    // Petición real al Backend
+                    const response = await fetch(SCRIPT_URL, {
+                        method: 'POST',
+                        body: JSON.stringify(payload)
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (result.status === 'success') {
+                        showToast('Registro actualizado correctamente.');
+                        closeModal();
+                        // Refrescar datos desde la hoja
+                        fetchData(); 
+                    } else {
+                        showToast('Error al guardar: ' + result.message, 'error');
+                    }
+                }
+            } catch (error) {
+                console.error("Error saving data:", error);
+                showToast('Error de red al intentar guardar.', 'error');
+            } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        }
+
+        // ==========================================
+        // UTILERÍAS DE UI Y FORMATO
+        // ==========================================
+        function getBadgeHtml(status) {
+            const s = status || 'Pendiente';
+            if (s === 'Resuelto') return '<span class="px-2 py-1 bg-green-100 text-green-700 text-xs font-semibold rounded-full border border-green-200"><i class="ph-fill ph-check-circle mr-1"></i>Resuelto</span>';
+            if (s === 'En proceso') return '<span class="px-2 py-1 bg-yellow-100 text-yellow-700 text-xs font-semibold rounded-full border border-yellow-200"><i class="ph-fill ph-clock mr-1"></i>En proceso</span>';
+            return '<span class="px-2 py-1 bg-red-100 text-red-700 text-xs font-semibold rounded-full border border-red-200"><i class="ph-fill ph-warning-circle mr-1"></i>Pendiente</span>';
+        }
+
+        function formatDate(dateString) {
+            if (!dateString) return '-';
+            const date = new Date(dateString);
+            if (isNaN(date)) return dateString;
+            return date.toLocaleDateString('es-MX', { year: 'numeric', month: 'short', day: 'numeric' });
+        }
+
+        function showLoader(show) {
+            const l = document.getElementById('loader');
+            if (show) l.classList.remove('hidden');
+            else l.classList.add('hidden');
+        }
+
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            document.getElementById('toast-message').innerText = message;
+            
+            const icon = document.getElementById('toast-icon');
+            if(type === 'success') {
+                icon.className = 'ph-fill ph-check-circle text-green-400 text-xl';
+                toast.className = "fixed bottom-5 right-5 bg-gray-800 text-white px-4 py-3 rounded-lg shadow-lg flex items-center gap-3 transform transition-all duration-300 z-50 translate-y-0 opacity-100";
+            } else {
+                icon.className = 'ph-fill ph-warning-circle text-red-400 text-xl';
+                toast.className = "fixed bottom-5 right-5 bg-red-800 text-white px-4 py-3 rounded-lg shadow-lg flex items-center gap-3 transform transition-all duration-300 z-50 translate-y-0 opacity-100";
+            }
+
+            setTimeout(() => {
+                toast.classList.remove('translate-y-0', 'opacity-100');
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 3000);
+        }
+
+        function animateValue(id, start, end, duration) {
+            if (start === end) return;
+            let obj = document.getElementById(id);
+            let startTimestamp = null;
+            const step = (timestamp) => {
+                if (!startTimestamp) startTimestamp = timestamp;
+                const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+                obj.innerHTML = Math.floor(progress * (end - start) + start);
+                if (progress < 1) {
+                    window.requestAnimationFrame(step);
+                } else {
+                    obj.innerHTML = end; // Ensure exact end
+                }
+            };
+            window.requestAnimationFrame(step);
+        }
+    </script>
+</body>
+</html>
